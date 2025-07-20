@@ -14,8 +14,20 @@ def run_inventory_app():
 
     # Selection UI
     category = st.selectbox("Select Category", sorted(inv["Category"].unique()))
-    size = st.selectbox("Select Size", sorted(inv[inv["Category"] == category]["Size"].unique()))
-    item = st.selectbox("Select Item", sorted(inv[(inv["Category"] == category) & (inv["Size"] == size)]["Item"].unique()))
+    # Filter by category and show Size dropdown only if available
+filtered_by_cat = inv[inv["Category"] == category]
+if not filtered_by_cat.empty:
+    size = st.selectbox("Select Size", sorted(filtered_by_cat["Size"].dropna().unique()))
+    filtered_by_size = filtered_by_cat[filtered_by_cat["Size"] == size]
+
+    if not filtered_by_size.empty:
+        item = st.selectbox("Select Item", sorted(filtered_by_size["Item"].dropna().unique()))
+    else:
+        st.warning("No items found for this size.")
+        return
+else:
+    st.warning("No sizes found for this category.")
+    return & (inv["Size"] == size)]["Item"].unique()))
     idx = inv[(inv["Category"] == category) & (inv["Size"] == size) & (inv["Item"] == item)].index[0]
 
     st.markdown("---")
