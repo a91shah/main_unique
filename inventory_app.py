@@ -4,7 +4,7 @@ from gspread_helper import load_inventory_from_gsheet, update_inventory_to_gshee
 
 # Sheet config
 sheet_id = "1V61WCd-bGiLTwrdQKr1WccSIEZ570Ft9WLPdlxdiVJA"
-sheet_name = "inv_check"
+worksheet_name = "Sheet1"
 
 def run_inventory_app():
     st.title("🧮 Inventory Management")
