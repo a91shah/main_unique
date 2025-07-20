@@ -2,85 +2,74 @@ import streamlit as st
 import pandas as pd
 from gspread_helper import load_inventory_from_gsheet, update_inventory_to_gsheet
 
+# Sheet config
+sheet_id = "1V61WCd-bGiLTwrdQKr1WccSIEZ570Ft9WLPdlxdiVJA"
+sheet_name = "inv_check"
+
 def run_inventory_app():
     st.title("🧮 Inventory Management")
 
-    sheet_id = "1V61WCd-bGiLTwrdQKr1WccSIEZ570Ft9WLPdlxdiVJA"
-    sheet_name = "inv_check"
+    # Load data
     inv = load_inventory_from_gsheet(sheet_id, sheet_name)
 
+    # User selects Category, Size, Item
+    category = st.selectbox("Select Category", sorted(inv["Category"].unique()))
+    size = st.selectbox("Select Size", sorted(inv[inv["Category"] == category]["Size"].unique()))
+    item = st.selectbox("Select Item", sorted(inv[(inv["Category"] == category) & (inv["Size"] == size)]["Item"].unique()))
 
-    if 'inventory' not in st.session_state:
-        st.session_state.inventory = inv.copy()
+    row_filter = (inv["Category"] == category) & (inv["Size"] == size) & (inv["Item"] == item)
+    selected_row = inv[row_filter].copy()
 
-    inv = st.session_state.inventory
-
-    st.subheader("Add Inventory")
-    category_options = sorted(inv['Category'].dropna().unique())
-    category = st.selectbox("Select Category", category_options)
-
-    filtered_by_category = inv[inv["Category"] == category]
-    if filtered_by_category.empty:
-        st.warning("No items available for this category.")
+    if selected_row.empty:
+        st.warning("No item found. Please check your selection.")
         return
 
-    size_options = sorted(filtered_by_category["Size"].dropna().unique())
-    size = st.selectbox("Select Size", size_options)
+    # Inputs
+    st.subheader("Add to Inventory")
+    add_type = st.radio("Add in:", ["Box", "Packets/Nos"], horizontal=True)
+    add_qty = st.number_input(f"Enter quantity to add ({add_type})", min_value=0, step=1)
 
-    filtered_by_size = filtered_by_category[filtered_by_category["Size"] == size]
-    if filtered_by_size.empty:
-        st.warning("No items available for this size.")
-        return
+    if st.button("➕ Add to Diesel Engine"):
+        if add_qty > 0:
+            packets_per_box = int(selected_row["Packets_per_Box"].values[0])
+            add_packets = add_qty * packets_per_box if add_type == "Box" else add_qty
+            inv.loc[row_filter, "Diesel_Engine"] += add_packets
+            inv.loc[row_filter, "Total_Packets"] = inv.loc[row_filter, "Diesel_Engine"] + inv.loc[row_filter, "Rack"]
+            update_inventory_to_gsheet(sheet_id, sheet_name, inv)
+            st.success(f"Added {add_packets} packets to Diesel Engine.")
 
-    item_options = sorted(filtered_by_size["Item"].dropna().unique())
-    item = st.selectbox("Select Item", item_options)
+    st.subheader("Move Packets to Rack")
+    move_qty = st.number_input("Enter packets to move to Rack", min_value=0, step=1)
+    if st.button("🚚 Move to Rack"):
+        available = int(inv.loc[row_filter, "Diesel_Engine"].values[0])
+        if move_qty <= available:
+            inv.loc[row_filter, "Diesel_Engine"] -= move_qty
+            inv.loc[row_filter, "Rack"] += move_qty
+            inv.loc[row_filter, "Total_Packets"] = inv.loc[row_filter, "Diesel_Engine"] + inv.loc[row_filter, "Rack"]
+            update_inventory_to_gsheet(sheet_id, sheet_name, inv)
+            st.success(f"Moved {move_qty} packets to Rack.")
+        else:
+            st.error(f"Not enough packets in Diesel Engine. Available: {available}")
 
-    action = st.radio("Select Action", ["Add to Diesel Engine", "Move to Rack", "Subtract from Rack"])
+    st.subheader("Subtract from Rack (moved to Shop)")
+    sub_qty = st.number_input("Enter packets to subtract from Rack", min_value=0, step=1)
+    if st.button("➖ Subtract from Rack"):
+        available = int(inv.loc[row_filter, "Rack"].values[0])
+        if sub_qty <= available:
+            inv.loc[row_filter, "Rack"] -= sub_qty
+            inv.loc[row_filter, "Total_Packets"] = inv.loc[row_filter, "Diesel_Engine"] + inv.loc[row_filter, "Rack"]
+            update_inventory_to_gsheet(sheet_id, sheet_name, inv)
+            st.success(f"Subtracted {sub_qty} packets from Rack.")
+        else:
+            st.error(f"Not enough packets in Rack. Available: {available}")
 
-    mode = st.radio("Select Unit", ["Box", "Packets/Nos"])
-    quantity = st.number_input("Enter Quantity", min_value=1, step=1)
+    st.subheader("📊 Inventory Status")
+    if st.button("🔄 Show Current Inventory"):
+        def highlight_low(val):
+            try:
+                return 'background-color: #ffcccc' if int(val) < 10 else ''
+            except:
+                return ''
 
-    if st.button("Submit"):
-        idx = inv[(inv["Category"] == category) & (inv["Size"] == size) & (inv["Item"] == item)].index
-        if idx.empty:
-            st.error("Selected combination not found in inventory.")
-            return
-
-        idx = idx[0]
-
-        try:
-            packets_per_box = int(inv.at[idx, "Packets_per_Box"])
-        except:
-            st.error("Packets_per_Box value is missing or invalid.")
-            return
-
-        if mode == "Box":
-            quantity *= packets_per_box
-
-        if action == "Add to Diesel Engine":
-            inv.at[idx, "Diesel_Engine"] = int(inv.at[idx, "Diesel_Engine"]) + quantity
-
-        elif action == "Move to Rack":
-            if inv.at[idx, "Diesel_Engine"] >= quantity:
-                inv.at[idx, "Diesel_Engine"] -= quantity
-                inv.at[idx, "Rack"] = int(inv.at[idx, "Rack"]) + quantity
-            else:
-                st.error("Not enough inventory in Diesel Engine.")
-                return
-
-        elif action == "Subtract from Rack":
-            if inv.at[idx, "Rack"] >= quantity:
-                inv.at[idx, "Rack"] -= quantity
-            else:
-                st.error("Not enough inventory in Rack.")
-                return
-
-        inv.at[idx, "Total_Packets"] = inv.at[idx, "Diesel_Engine"] + inv.at[idx, "Rack"]
-        update_inventory_to_gsheet(sheet_name, inv)
-        st.success("Inventory updated successfully.")
-
-    if st.button("Show Inventory Status"):
-        st.subheader("Current Inventory")
-        display_inv = inv.copy()
-        display_inv["Status"] = display_inv["Rack"].apply(lambda x: "🔴 LOW" if x < 10 else "🟢 OK")
-        st.dataframe(display_inv)
+        display_df = inv[["Category", "Size", "Item", "Diesel_Engine", "Rack", "Total_Packets"]]
+        st.dataframe(display_df.style.applymap(highlight_low, subset=["Rack"]))
