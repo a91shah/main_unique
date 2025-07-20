@@ -10,7 +10,7 @@ def run_inventory_app():
     st.title("🧮 Inventory Management")
 
     # Load data
-    inv = load_inventory_from_gsheet(sheet_id, sheet_name)
+    inv = load_inventory_from_gsheet(sheet_id, worksheet_name)
 
     # User selects Category, Size, Item
     category = st.selectbox("Select Category", sorted(inv["Category"].unique()))
@@ -35,7 +35,7 @@ def run_inventory_app():
             add_packets = add_qty * packets_per_box if add_type == "Box" else add_qty
             inv.loc[row_filter, "Diesel_Engine"] += add_packets
             inv.loc[row_filter, "Total_Packets"] = inv.loc[row_filter, "Diesel_Engine"] + inv.loc[row_filter, "Rack"]
-            update_inventory_to_gsheet(sheet_id, sheet_name, inv)
+            update_inventory_to_gsheet(sheet_id, worksheet_name, inv)
             st.success(f"Added {add_packets} packets to Diesel Engine.")
 
     st.subheader("Move Packets to Rack")
@@ -46,7 +46,7 @@ def run_inventory_app():
             inv.loc[row_filter, "Diesel_Engine"] -= move_qty
             inv.loc[row_filter, "Rack"] += move_qty
             inv.loc[row_filter, "Total_Packets"] = inv.loc[row_filter, "Diesel_Engine"] + inv.loc[row_filter, "Rack"]
-            update_inventory_to_gsheet(sheet_id, sheet_name, inv)
+            update_inventory_to_gsheet(sheet_id, worksheet_name, inv)
             st.success(f"Moved {move_qty} packets to Rack.")
         else:
             st.error(f"Not enough packets in Diesel Engine. Available: {available}")
@@ -58,7 +58,7 @@ def run_inventory_app():
         if sub_qty <= available:
             inv.loc[row_filter, "Rack"] -= sub_qty
             inv.loc[row_filter, "Total_Packets"] = inv.loc[row_filter, "Diesel_Engine"] + inv.loc[row_filter, "Rack"]
-            update_inventory_to_gsheet(sheet_id, sheet_name, inv)
+            update_inventory_to_gsheet(sheet_id, worksheet_name, inv)
             st.success(f"Subtracted {sub_qty} packets from Rack.")
         else:
             st.error(f"Not enough packets in Rack. Available: {available}")
