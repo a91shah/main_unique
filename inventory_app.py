@@ -1,24 +1,14 @@
+from gspread_helper import load_inventory_from_gsheet, save_inventory_to_gsheet
+import streamlit as st
+import pandas as pd
+
 def run_inventory_app():
-    import streamlit as st
-    import pandas as pd
-
-    EXCEL_FILE = "Inv_check.xlsx"
-
-    @st.cache_data
-    def load_data():
-        df = pd.read_excel(EXCEL_FILE)
-        df.columns = df.columns.str.strip().str.replace(" ", "_")  # Clean column names
-        return df.copy()
-
-    def save_data(df):
-        df.to_excel(EXCEL_FILE, index=False)
-
     if 'inventory' not in st.session_state:
-        st.session_state.inventory = load_data()
-
-    st.title("🔧 Inventory Management")
+        st.session_state.inventory = load_inventory_from_gsheet()
 
     inv = st.session_state.inventory
+
+    st.title("🔧 Inventory Management")
 
     category_options = inv['Category'].dropna().unique()
     size_options = inv['Size'].dropna().unique()
@@ -79,8 +69,8 @@ def run_inventory_app():
                 st.error("❌ Not enough packets in Rack.")
 
         inv.at[idx, 'Total_Packets'] = inv.at[idx, 'Diesel_Engine'] + inv.at[idx, 'Rack']
-        save_data(inv)
-        st.success("💾 Inventory updated and saved to Excel.")
+        save_inventory_to_gsheet(inv)
+        st.success("💾 Inventory updated and saved to Google Sheet.")
 
     st.header("3️⃣ Inventory Status")
     if st.button("📊 Show Current Inventory"):
