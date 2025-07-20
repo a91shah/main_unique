@@ -7,7 +7,8 @@ def run_inventory_app():
 
     sheet_id = "1V61WCd-bGiLTwrdQKr1WccSIEZ570Ft9WLPdlxdiVJA"
     sheet_name = "inv_check"
-    inv = load_inventory_from_gsheet(sheet_name)
+    inv = load_inventory_from_gsheet(sheet_id, sheet_name)
+
 
     if 'inventory' not in st.session_state:
         st.session_state.inventory = inv.copy()
