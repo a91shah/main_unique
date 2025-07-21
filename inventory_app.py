@@ -50,7 +50,6 @@ def run_inventory_app():
     add_box = st.number_input("Enter number of Boxes to add", min_value=0, step=1, key="add_box")
     add_packets = st.number_input("Or enter number of Packets/Nos to add", min_value=0, step=1, key="add_packets")
     if st.button("Add to Diesel Engine"):
-    update_inventory_to_gsheet(inv)
         packets_per_box = inv.loc[row_index, "Packets_per_Box"]
         added_packets = add_packets + (add_box * packets_per_box)
         inv.at[row_index, "Diesel_Engine"] += added_packets
@@ -62,7 +61,6 @@ def run_inventory_app():
     st.subheader("➡️ Move Inventory to Rack")
     move_packets = st.number_input("Enter number of packets to move", min_value=0, step=1, key="move_to_rack")
     if st.button("Move to Rack"):
-    update_inventory_to_gsheet(inv)
         if move_packets > inv.at[row_index, "Diesel_Engine"]:
             st.error("❌ Not enough packets in Diesel Engine.")
         else:
@@ -76,7 +74,6 @@ def run_inventory_app():
     st.subheader("➖ Subtract Inventory from Rack (Shop Dispatch)")
     subtract_packets = st.number_input("Enter number of packets to subtract", min_value=0, step=1, key="subtract_rack")
     if st.button("Subtract from Rack"):
-    update_inventory_to_gsheet(inv)
         if subtract_packets > inv.at[row_index, "Rack"]:
             st.error("❌ Not enough packets in Rack.")
         else:
