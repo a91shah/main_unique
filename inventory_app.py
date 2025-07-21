@@ -6,74 +6,73 @@ def run_inventory_app():
     st.title("🧮 Inventory Management")
 
     sheet_id = "1V61WCd-bGiLTwrdQKr1WccSIEZ570Ft9WLPdlxdiVJA"
-    worksheet_name = "Sheet1"
+    sheet_name = "Sheet1"
+    inv = load_inventory_from_gsheet(sheet_id, sheet_name)
 
-    # Load inventory
-    if "inventory" not in st.session_state:
-        st.session_state.inventory = load_inventory_from_gsheet(sheet_id, worksheet_name)
+    if inv.empty or "Category" not in inv.columns:
+        st.warning("Inventory data is empty or missing 'Category' column.")
+        return
 
-    inv = st.session_state.inventory
+    category = st.selectbox("Select Category", sorted(inv["Category"].dropna().unique()))
+    filtered_inv = inv[inv["Category"] == category]
 
-    # Select Category
-   category = st.selectbox("Select Category", sorted(inv["Category"].dropna().unique()))
-filtered_inv = inv[inv["Category"] == category]
+    if filtered_inv.empty or "Size" not in filtered_inv.columns:
+        st.warning("No sizes found for this category.")
+        return
 
-if filtered_inv.empty or "Size" not in filtered_inv.columns:
-    st.warning("No sizes found for this category.")
-    return
+    size = st.selectbox("Select Size", sorted(filtered_inv["Size"].dropna().unique()))
+    filtered_inv = filtered_inv[filtered_inv["Size"] == size]
 
-size = st.selectbox("Select Size", sorted(filtered_inv["Size"].dropna().unique()))
+    if filtered_inv.empty or "Item" not in filtered_inv.columns:
+        st.warning("No items found for this size.")
+        return
 
+    item = st.selectbox("Select Item", sorted(filtered_inv["Item"].dropna().unique()))
+    entry = filtered_inv[(filtered_inv["Item"] == item)].copy()
 
-        if not filtered_inv.empty:
-            # Select Item
-            item = st.selectbox("Select Item", sorted(filtered_inv["Item"].dropna().unique()))
-            row_index = filtered_inv[filtered_inv["Item"] == item].index
+    if entry.empty:
+        st.warning("No matching inventory item found.")
+        return
 
-            if not row_index.empty:
-                index = row_index[0]
-                st.write(f"### Selected Item: {item}")
-                col1, col2 = st.columns(2)
-                with col1:
-                    add_type = st.radio("Add Format", ["Box", "Packets/Nos"])
-                with col2:
-                    location = st.radio("Add to", ["Diesel Engine", "Rack"])
+    box = st.number_input("Enter Box", min_value=0, step=1)
+    packets = st.number_input("Or Enter Packets/Nos", min_value=0, step=1)
 
-                quantity = st.number_input("Enter quantity", min_value=0, step=1)
-                if st.button("➕ Add"):
-                    if add_type == "Box":
-                        packets = quantity * int(inv.at[index, "Packets_per_Box"])
-                    else:
-                        packets = quantity
+    add_btn = st.button("➕ Add to Diesel Engine")
+    move_btn = st.button("📦 Move to Rack")
+    subtract_btn = st.button("➖ Subtract from Rack")
+    show_btn = st.button("📊 Show Current Inventory")
 
-                    if location == "Diesel Engine":
-                        inv.at[index, "Diesel_Engine"] += packets
-                    else:
-                        inv.at[index, "Rack"] += packets
-                        inv.at[index, "Diesel_Engine"] -= packets
+    idx = entry.index[0]
+    packets_per_box = int(entry.at[idx, "Packets_per_Box"]) if pd.notna(entry.at[idx, "Packets_per_Box"]) else 0
 
-                    inv.at[index, "Total_Packets"] = inv.at[index, "Diesel_Engine"] + inv.at[index, "Rack"]
-                    st.success("Inventory updated.")
-                    update_inventory_to_gsheet(sheet_id, worksheet_name, inv)
+    if add_btn:
+        total_packets = packets + box * packets_per_box
+        inv.at[idx, "Diesel_Engine"] = int(inv.at[idx, "Diesel_Engine"]) + total_packets
+        inv.at[idx, "Total_Packets"] = int(inv.at[idx, "Diesel_Engine"]) + int(inv.at[idx, "Rack"])
+        update_inventory_to_gsheet(sheet_id, sheet_name, inv)
+        st.success(f"Added {total_packets} packets to Diesel Engine.")
 
-                if st.button("➖ Subtract from Rack"):
-                    if quantity > inv.at[index, "Rack"]:
-                        st.error("Not enough stock in Rack.")
-                    else:
-                        inv.at[index, "Rack"] -= quantity
-                        inv.at[index, "Total_Packets"] = inv.at[index, "Diesel_Engine"] + inv.at[index, "Rack"]
-                        st.success("Stock subtracted from Rack.")
-                        update_inventory_to_gsheet(sheet_id, worksheet_name, inv)
-
-            else:
-                st.warning("No item found for the selected size.")
+    if move_btn:
+        move_qty = st.number_input("Move how many packets to Rack?", min_value=0, step=1)
+        if move_qty > int(inv.at[idx, "Diesel_Engine"]):
+            st.error("Not enough packets in Diesel Engine.")
         else:
-            st.warning("No sizes available for the selected category.")
-    else:
-        st.warning("No inventory found for selected category.")
+            inv.at[idx, "Diesel_Engine"] -= move_qty
+            inv.at[idx, "Rack"] += move_qty
+            inv.at[idx, "Total_Packets"] = int(inv.at[idx, "Diesel_Engine"]) + int(inv.at[idx, "Rack"])
+            update_inventory_to_gsheet(sheet_id, sheet_name, inv)
+            st.success(f"Moved {move_qty} packets to Rack.")
 
-    if st.button("📊 Show Current Inventory"):
-        st.dataframe(inv.style.apply(
-            lambda row: ["background-color: red" if row["Rack"] < 10 else "" for _ in row],
-            axis=1
-        ))
+    if subtract_btn:
+        sub_qty = st.number_input("Subtract how many packets from Rack?", min_value=0, step=1)
+        if sub_qty > int(inv.at[idx, "Rack"]):
+            st.error("Not enough packets in Rack.")
+        else:
+            inv.at[idx, "Rack"] -= sub_qty
+            inv.at[idx, "Total_Packets"] = int(inv.at[idx, "Diesel_Engine"]) + int(inv.at[idx, "Rack"])
+            update_inventory_to_gsheet(sheet_id, sheet_name, inv)
+            st.success(f"Subtracted {sub_qty} packets from Rack.")
+
+    if show_btn:
+        st.subheader("📋 Current Inventory Status")
+        st.dataframe(inv[["Category", "Size", "Item", "Diesel_Engine", "Rack", "Total_Packets"]])
