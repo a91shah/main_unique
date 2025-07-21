@@ -14,7 +14,7 @@ def connect_to_gsheet():
     sheet = client.open_by_key(SHEET_ID).worksheet(WORKSHEET_NAME)
     return sheet
 
-@st.cache_data
+
 def load_data():
     sheet = connect_to_gsheet()
     df = pd.DataFrame(sheet.get_all_records())
