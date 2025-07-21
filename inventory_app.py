@@ -15,13 +15,15 @@ def run_inventory_app():
     inv = st.session_state.inventory
 
     # Select Category
-    category = st.selectbox("Select Category", sorted(inv["Category"].dropna().unique()))
-    filtered_inv = inv[inv["Category"] == category]
+   category = st.selectbox("Select Category", sorted(inv["Category"].dropna().unique()))
+filtered_inv = inv[inv["Category"] == category]
 
-    if not filtered_inv.empty:
-        # Select Size
-        size = st.selectbox("Select Size", sorted(filtered_inv["Size"].dropna().unique()))
-        filtered_inv = filtered_inv[filtered_inv["Size"] == size]
+if filtered_inv.empty or "Size" not in filtered_inv.columns:
+    st.warning("No sizes found for this category.")
+    return
+
+size = st.selectbox("Select Size", sorted(filtered_inv["Size"].dropna().unique()))
+
 
         if not filtered_inv.empty:
             # Select Item
