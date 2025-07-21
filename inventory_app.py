@@ -1,30 +1,42 @@
+import streamlit as st
+import pandas as pd
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
+
+# Google Sheets config
+SHEET_ID = "1V61WCd-bGiLTwrdQKr1WccSIEZ570Ft9WLPdlxdiVJA"
+WORKSHEET_NAME = "Sheet1"
+SCOPE = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+
+def connect_to_gsheet():
+    creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["gcp_service_account"], SCOPE)
+    client = gspread.authorize(creds)
+    sheet = client.open_by_key(SHEET_ID).worksheet(WORKSHEET_NAME)
+    return sheet
+
+@st.cache_data
+def load_data():
+    sheet = connect_to_gsheet()
+    df = pd.DataFrame(sheet.get_all_records())
+    df.columns = df.columns.str.strip().str.replace(" ", "_")
+    return df
+
+def save_data(df):
+    sheet = connect_to_gsheet()
+    sheet.clear()
+    sheet.update([df.columns.values.tolist()] + df.values.tolist())
+
 def run_inventory_app():
-    import streamlit as st
-    import pandas as pd
-
-    EXCEL_FILE = "Inv_check.xlsx"
-
-    @st.cache_data
-    def load_data():
-        df = pd.read_excel(EXCEL_FILE)
-        df.columns = df.columns.str.strip().str.replace(" ", "_")  # Clean column names
-        return df.copy()
-
-    def save_data(df):
-        df.to_excel(EXCEL_FILE, index=False)
-
     if 'inventory' not in st.session_state:
         st.session_state.inventory = load_data()
 
     st.title("🔧 Inventory Management")
 
     inv = st.session_state.inventory
-
     category_options = inv['Category'].dropna().unique()
     size_options = inv['Size'].dropna().unique()
 
     st.header("1️⃣ Select Inventory Item")
-
     col1, col2, col3 = st.columns(3)
     with col1:
         selected_category = st.selectbox("Category", category_options)
@@ -42,6 +54,7 @@ def run_inventory_app():
         (inv['Size'] == selected_size) & 
         (inv['Item'] == selected_item)
     ]
+
     if item_row.empty:
         st.error("Item not found in inventory.")
         return
@@ -80,7 +93,7 @@ def run_inventory_app():
 
         inv.at[idx, 'Total_Packets'] = inv.at[idx, 'Diesel_Engine'] + inv.at[idx, 'Rack']
         save_data(inv)
-        st.success("💾 Inventory updated and saved to Excel.")
+        st.success("💾 Inventory updated and saved to Google Sheet.")
 
     st.header("3️⃣ Inventory Status")
     if st.button("📊 Show Current Inventory"):
