@@ -79,7 +79,7 @@ def run_inventory_app():
         if operation == "Add to Diesel Engine":
             inv.at[idx, 'Diesel_Engine'] += packets
             st.success(f"✅ {packets} packets added to Diesel Engine.")
-         elif operation == "Add to Rack":
+        elif operation == "Add to Rack":
             inv.at[idx, 'Rack'] += packets
             st.success(f"✅ {packets} packets added to Rack.")   
         elif operation == "Move to Rack":
@@ -102,7 +102,6 @@ def run_inventory_app():
             else:
                 st.error("❌ Not enough packets in Diesel_Engine.")        
 
-        inv.at[idx, 'Diesel_Engine_Box'] = inv.at[idx, 'Diesel_Engine'] / inv.at[idx, 'Packets_per_Box']
         inv.at[idx, 'Total_Packets'] = inv.at[idx, 'Diesel_Engine'] + inv.at[idx, 'Rack']
         save_data(inv)
         st.success("💾 Inventory updated and saved to Google Sheet.")
@@ -111,6 +110,7 @@ def run_inventory_app():
     if st.button("📊 Show Current Inventory"):
         display_df = inv.copy()
         display_df["Total_Packets"] = display_df["Diesel_Engine"] + display_df["Rack"]
+        display_df["Diesel_Engine_Box"] = display_df["Diesel_Engine"] / display_df["Packets_per_Box"]
         display_df["Status"] = display_df["Rack"].apply(lambda x: "LOW" if x < 10 else "OK")
 
         def highlight_low(val):
@@ -121,6 +121,7 @@ def run_inventory_app():
                            data=display_df.to_csv(index=False),
                            file_name="current_inventory.csv",
                            mime="text/csv")
+
 
 
 
