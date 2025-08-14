@@ -112,23 +112,12 @@ def run_inventory_app():
             return 'color: red; font-weight: bold' if val == "LOW" else ''
 
         st.dataframe(display_df.style.applymap(highlight_low, subset=["Status"]))
-        # New "Low status" button
-    elif st.button("🔻 Low status"):
-    display_df = inv.copy()
-    display_df["Total_Packets"] = display_df["Diesel_Engine"] + display_df["Rack"]
-    display_df["Status"] = display_df["Rack"].apply(lambda x: "LOW" if x < 10 else "OK")
-    
-    # Filter only LOW status
-    low_df = display_df[display_df["Status"] == "LOW"]
-    
-    # Select only the required columns
-    low_df_to_show = low_df[["category", "size", "items", "Total_Packets"]]
-    
     st.dataframe(low_df_to_show)
         st.download_button("📥 Download Inventory CSV",
                            data=display_df.to_csv(index=False),
                            file_name="current_inventory.csv",
                            mime="text/csv")
+
 
 
 
