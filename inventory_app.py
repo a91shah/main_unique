@@ -118,7 +118,7 @@ def run_inventory_app():
 
         st.dataframe(display_df.style.applymap(highlight_low, subset=["Status"]))
     # New Button for Low Status Items
-    elif st.button("🔴 Show Low Status Items"):
+    if st.button("🔴 Show Low Status Items"):
         low_df = inv.copy()
         low_df["Total_Packets"] = low_df["Diesel_Engine"] + low_df["Rack"]
         low_df["Status"] = low_df["Rack"].apply(lambda x: "LOW" if x < 10 else "OK")
@@ -133,6 +133,7 @@ def run_inventory_app():
         
 
     
+
 
 
 
