@@ -121,6 +121,19 @@ def run_inventory_app():
                            data=display_df.to_csv(index=False),
                            file_name="current_inventory.csv",
                            mime="text/csv")
+        # 🔴 New Button for Low Status Items
+    if st.button("🔴 Show Low Status Items"):
+        low_df = inv.copy()
+        low_df["Total_Packets"] = low_df["Diesel_Engine"] + low_df["Rack"]
+        low_df["Status"] = low_df["Rack"].apply(lambda x: "LOW" if x < 10 else "OK")
+        low_items = low_df[low_df["Status"] == "LOW"][["Category", "Size", "Item", "Total_Packets"]]
+
+        if not low_items.empty:
+            st.subheader("📉 Items with LOW Stock")
+            st.dataframe(low_items)
+        else:
+            st.info("✅ No items are currently in LOW status.")
+
 
 
 
