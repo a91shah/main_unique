@@ -67,6 +67,7 @@ def run_inventory_app():
         "Add to Diesel Engine", 
         "Move to Rack", 
         "Subtract from Rack"
+        "Move to Shop"
     ])
 
     qty_type = st.radio("Enter Quantity In", ["Boxes", "Packets"], horizontal=True)
@@ -90,6 +91,12 @@ def run_inventory_app():
                 st.success(f"🛒 {packets} packets subtracted from Rack (moved to Shop).")
             else:
                 st.error("❌ Not enough packets in Rack.")
+        elif operation == "Move to Shop":
+            if inv.at[idx, 'Diesel_Engine'] >= packets:
+                inv.at[idx, 'Diesel_Engine'] -= packets
+                st.success(f"🛒 {packets} packets subtracted from Diesel_Engine (moved to Shop).")
+            else:
+                st.error("❌ Not enough packets in Diesel_Engine.")        
 
         inv.at[idx, 'Total_Packets'] = inv.at[idx, 'Diesel_Engine'] + inv.at[idx, 'Rack']
         save_data(inv)
@@ -109,3 +116,4 @@ def run_inventory_app():
                            data=display_df.to_csv(index=False),
                            file_name="current_inventory.csv",
                            mime="text/csv")
+
