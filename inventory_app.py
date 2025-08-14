@@ -112,11 +112,11 @@ def run_inventory_app():
             return 'color: red; font-weight: bold' if val == "LOW" else ''
 
         st.dataframe(display_df.style.applymap(highlight_low, subset=["Status"]))
-    st.dataframe(low_df_to_show)
         st.download_button("📥 Download Inventory CSV",
                            data=display_df.to_csv(index=False),
                            file_name="current_inventory.csv",
                            mime="text/csv")
+
 
 
 
