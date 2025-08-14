@@ -131,11 +131,9 @@ def run_inventory_app():
             st.info("✅ No items are currently in LOW status.")
 
         
-        st.download_button("📥 Download Inventory CSV",
-                           data=display_df.to_csv(index=False),
-                           file_name="current_inventory.csv",
-                           mime="text/csv")
+
     
+
 
 
 
