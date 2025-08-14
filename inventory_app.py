@@ -65,6 +65,7 @@ def run_inventory_app():
     st.header("2️⃣ Perform Inventory Operation")
     operation = st.selectbox("Choose Operation", [
         "Add to Diesel Engine", 
+        "Add to Rack",
         "Move to Rack", 
         "Subtract from Rack",
         "Move to Shop"
@@ -78,6 +79,9 @@ def run_inventory_app():
         if operation == "Add to Diesel Engine":
             inv.at[idx, 'Diesel_Engine'] += packets
             st.success(f"✅ {packets} packets added to Diesel Engine.")
+         elif operation == "Add to Rack":
+            inv.at[idx, 'Rack'] += packets
+            st.success(f"✅ {packets} packets added to Rack.")   
         elif operation == "Move to Rack":
             if inv.at[idx, 'Diesel_Engine'] >= packets:
                 inv.at[idx, 'Diesel_Engine'] -= packets
@@ -98,6 +102,7 @@ def run_inventory_app():
             else:
                 st.error("❌ Not enough packets in Diesel_Engine.")        
 
+        inv.at[idx, 'Diesel_Engine_Box'] = inv.at[idx, 'Diesel_Engine'] / inv.at[idx, 'Packets_per_Box']
         inv.at[idx, 'Total_Packets'] = inv.at[idx, 'Diesel_Engine'] + inv.at[idx, 'Rack']
         save_data(inv)
         st.success("💾 Inventory updated and saved to Google Sheet.")
@@ -116,8 +121,6 @@ def run_inventory_app():
                            data=display_df.to_csv(index=False),
                            file_name="current_inventory.csv",
                            mime="text/csv")
-
-
 
 
 
