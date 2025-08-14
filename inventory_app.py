@@ -66,7 +66,7 @@ def run_inventory_app():
     operation = st.selectbox("Choose Operation", [
         "Add to Diesel Engine", 
         "Move to Rack", 
-        "Subtract from Rack"
+        "Subtract from Rack",
         "Move to Shop"
     ])
 
@@ -116,4 +116,5 @@ def run_inventory_app():
                            data=display_df.to_csv(index=False),
                            file_name="current_inventory.csv",
                            mime="text/csv")
+
 
